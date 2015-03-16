@@ -36,10 +36,10 @@ def cli_oauth(save=True):
         print 'auth success!'
         print 'access_token', js['access_token']
         print 'refresh_token', js['refresh_token']
-        if save is True:
-            Oauth.save(js['refresh_token'])
         Oauth.__refresh_token = js['refresh_token']
         Oauth.__access_token = js['access_token']
+        if save is True:
+            Oauth.save()
     except ValueError:
         print 'cli_oauth(): server return not json'
         print r.text
@@ -52,6 +52,7 @@ def cli_oauth(save=True):
         print traceback.print_exc()
         return False
     return True
+
 
 class Oauth(object):
 
@@ -66,8 +67,8 @@ class Oauth(object):
         return os.path.join(os.path.split(os.path.realpath(__file__))[0], 'auth')
 
     @staticmethod
-    def save(refresh_token):
-        open(Oauth._oath_path(), 'w').write(refresh_token)
+    def save():
+        open(Oauth._oath_path(), 'w').write(Oauth.__refresh_token)
 
     @staticmethod
     def load():
@@ -75,7 +76,7 @@ class Oauth(object):
         if not os.path.isfile(auth_path):
             print 'auth file is not exists'
             return False
-        Oauth.refresh_token = open(auth_path, 'r').read()
+        Oauth.__refresh_token = open(auth_path, 'r').read()
         return True
 
     @staticmethod
@@ -92,10 +93,34 @@ class Oauth(object):
         if t is None:
             print 'update_access_token() Need refresh_token is None'
             return False
-        
+        d = {'refresh_token': t, 'client_id': client_id,
+             'client_secret': client_secret, 'grant_type': 'refresh_token'}
+        r = requests.post('https://www.googleapis.com/oauth2/v3/token', data=d, proxies=PROXY, timeout=TIMEOUT)
+        try:
+            js = json.loads(r.text)
+            if 'error' in js:
+                print 'update_access_token(): oath failed'
+                print 'error:%s description:%s' % (js['error'], js['error_description'])
+                return False
+            print 'access_token success!'
+            print 'access_token', js['access_token']
+            Oauth.__access_token = js['access_token']
+        except ValueError:
+            print 'update_access_token(): server return not json'
+            print r.text
+            return False
+        except KeyError:
+            print 'update_access_token(): oath failed'
+            print r.text
+            return False
+        except:
+            print traceback.print_exc()
+            return False
+        return True
 
 
 #cli_oauth(save=True)
 
 Oauth.load()
+Oauth.update_access_token()
 print Oauth.get_refresh_token()
