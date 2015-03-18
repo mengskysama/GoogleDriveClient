@@ -80,7 +80,7 @@ class Drive(object):
         return self.__root_id
         
     def get_path_id(self, path):
-        #Can NOT identified the same path and name folder
+        #Can NOT identified the same name folder
         #Does NOT include trashed files
         lpath = path.strip('/').split('/')
         if len(lpath) == 1 and lpath[0] == '':
